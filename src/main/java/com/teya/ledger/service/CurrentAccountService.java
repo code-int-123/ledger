@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -54,8 +53,7 @@ public class CurrentAccountService {
      * @throws AccountNotFoundException if {@code accountId} does not exist
      */
     public TransactionRecord deposit(UUID depositId, UUID accountId, BigDecimal amount) {
-        CurrentAccount account = Optional.ofNullable(accountsById.get(accountId))
-                .orElseThrow(() -> new AccountNotFoundException(accountId));
+        CurrentAccount account = getAccount(accountId);
         Map<UUID, TransactionRecord> transactions = transactionsByAccountId.get(accountId);
         synchronized (this) {
             TransactionRecord existing = transactions.get(depositId);
@@ -80,8 +78,7 @@ public class CurrentAccountService {
      * @throws InsufficientBalanceException if the account balance is less than {@code amount}
      */
     public TransactionRecord withdraw(UUID withdrawId, UUID accountId, BigDecimal amount) {
-        CurrentAccount account = Optional.ofNullable(accountsById.get(accountId))
-                .orElseThrow(() -> new AccountNotFoundException(accountId));
+        CurrentAccount account = getAccount(accountId);
         Map<UUID, TransactionRecord> transactions = transactionsByAccountId.get(accountId);
         synchronized (this) {
             TransactionRecord existing = transactions.get(withdrawId);
@@ -114,10 +111,11 @@ public class CurrentAccountService {
      * @throws InsufficientBalanceException if the source balance is less than {@code amount}
      */
     public TransactionRecord transfer(UUID transferId, UUID sourceAccountId, UUID targetAccountId, BigDecimal amount) {
-        CurrentAccount source = Optional.ofNullable(accountsById.get(sourceAccountId))
-                .orElseThrow(() -> new AccountNotFoundException(sourceAccountId));
-        CurrentAccount target = Optional.ofNullable(accountsById.get(targetAccountId))
-                .orElseThrow(() -> new AccountNotFoundException(targetAccountId));
+        if (sourceAccountId.equals(targetAccountId)) {
+            throw new IllegalArgumentException("Source and target account must be different");
+        }
+        CurrentAccount source = getAccount(sourceAccountId);
+        CurrentAccount target = getAccount(targetAccountId);
         Map<UUID, TransactionRecord> sourceTransactions = transactionsByAccountId.get(sourceAccountId);
         Map<UUID, TransactionRecord> targetTransactions = transactionsByAccountId.get(targetAccountId);
         synchronized (this) {
@@ -144,6 +142,12 @@ public class CurrentAccountService {
      * @return an unmodifiable map of transaction ID to {@link TransactionRecord}
      * @throws AccountNotFoundException if {@code accountId} does not exist
      */
+    private CurrentAccount getAccount(UUID accountId) {
+        CurrentAccount account = accountsById.get(accountId);
+        if (account == null) throw new AccountNotFoundException(accountId);
+        return account;
+    }
+
     public Map<UUID, TransactionRecord> getTransactions(UUID accountId) {
         Map<UUID, TransactionRecord> transactions = transactionsByAccountId.get(accountId);
         if (transactions == null) {

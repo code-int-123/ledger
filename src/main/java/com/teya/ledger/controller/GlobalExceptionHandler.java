@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse().message(message));
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception e) {
         log.warn("Bad request: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

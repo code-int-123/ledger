@@ -498,6 +498,77 @@ class CurrentAccountE2ETest {
         }
 
         @Test
+        void returns400WhenSourceAndTargetAreSameAccount() throws Exception {
+            UUID accountId = openAccount(UUID.randomUUID());
+            deposit(accountId, UUID.randomUUID(), 200.00);
+
+            mockMvc.perform(post("/accounts/current/{accountId}/transfer", accountId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "transferId", UUID.randomUUID(),
+                                    "targetAccountId", accountId,
+                                    "amount", 100.00))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").isNotEmpty());
+        }
+
+        @Test
+        void selfTransferDoesNotAffectBalance() throws Exception {
+            UUID accountId = openAccount(UUID.randomUUID());
+            deposit(accountId, UUID.randomUUID(), 200.00);
+
+            // attempt self-transfer — rejected with 400
+            mockMvc.perform(post("/accounts/current/{accountId}/transfer", accountId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "transferId", UUID.randomUUID(),
+                                    "targetAccountId", accountId,
+                                    "amount", 100.00))))
+                    .andExpect(status().isBadRequest());
+
+            // balance is unchanged — full 200 is still available
+            mockMvc.perform(post("/accounts/current/{accountId}/withdraw", accountId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("withdrawId", UUID.randomUUID(), "amount", 200.00))))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        void selfTransferNotRecordedInHistory() throws Exception {
+            UUID accountId = openAccount(UUID.randomUUID());
+            deposit(accountId, UUID.randomUUID(), 100.00);
+
+            // attempt self-transfer — rejected with 400
+            mockMvc.perform(post("/accounts/current/{accountId}/transfer", accountId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "transferId", UUID.randomUUID(),
+                                    "targetAccountId", accountId,
+                                    "amount", 50.00))))
+                    .andExpect(status().isBadRequest());
+
+            // only the deposit is in history — no transfer records
+            mockMvc.perform(get("/accounts/current/{accountId}/transactions", accountId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.transactions.length()").value(1));
+        }
+
+        @Test
+        void returns400ForSelfTransferEvenWhenAccountDoesNotExist() throws Exception {
+            UUID nonExistentId = UUID.randomUUID();
+
+            // self-transfer check fires before account existence check — expect 400, not 404
+            mockMvc.perform(post("/accounts/current/{accountId}/transfer", nonExistentId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of(
+                                    "transferId", UUID.randomUUID(),
+                                    "targetAccountId", nonExistentId,
+                                    "amount", 100.00))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").isNotEmpty());
+        }
+
+        @Test
         void returns400WhenTransferIdMissing() throws Exception {
             UUID sourceAccountId = openAccount(UUID.randomUUID());
             UUID targetAccountId = openAccount(UUID.randomUUID());
