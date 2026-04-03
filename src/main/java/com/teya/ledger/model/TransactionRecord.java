@@ -1,9 +1,12 @@
 package com.teya.ledger.model;
 
+import lombok.Getter;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+@Getter
 public class TransactionRecord implements Comparable<TransactionRecord> {
 
     public enum Type {
@@ -22,27 +25,9 @@ public class TransactionRecord implements Comparable<TransactionRecord> {
         this.timestamp = Instant.now();
     }
 
-    public UUID getTransactionId() {
-        return transactionId;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public Instant getTimestamp() {
-        return timestamp;
-    }
-
     @Override
     public int compareTo(TransactionRecord other) {
         int cmp = this.timestamp.compareTo(other.timestamp);
         return cmp != 0 ? cmp : this.transactionId.compareTo(other.transactionId);
     }
-
-
 }

@@ -4,6 +4,8 @@ import com.teya.ledger.model.TransactionRecord;
 import com.teya.ledger.service.CurrentAccountService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.openapitools.api.AccountsApi;
 import org.openapitools.model.DepositRequest;
 import org.openapitools.model.OpenCurrentAccountRequest;
@@ -22,22 +24,33 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @RestController
+@RequiredArgsConstructor
 public class CurrentAccountController implements AccountsApi {
 
     private final CurrentAccountService currentAccountService;
-
-    public CurrentAccountController(CurrentAccountService currentAccountService) {
-        this.currentAccountService = currentAccountService;
-    }
 
     @Override
     public ResponseEntity<OpenCurrentAccountResponse> openCurrentAccount(
             @Parameter(name = "OpenCurrentAccountRequest", description = "", required = true) @Valid @RequestBody OpenCurrentAccountRequest openCurrentAccountRequest
     ) {
+        log.info("openCurrentAccount: userId={}", openCurrentAccountRequest.getUserId());
         UUID accountId = currentAccountService.openCurrentAccount(openCurrentAccountRequest.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new OpenCurrentAccountResponse().accountId(accountId));
+    }
+
+    @Override
+    public ResponseEntity<TransactionListResponse> getTransactions(
+            @PathVariable UUID accountId
+    ) {
+        log.info("getTransactions: accountId={}", accountId);
+        List<TransactionResponse> txs = currentAccountService.getTransactions(accountId)
+                .values().stream()
+                .map(this::toTransactionResponse)
+                .toList();
+        return ResponseEntity.ok(new TransactionListResponse().transactions(txs));
     }
 
     @Override
@@ -45,6 +58,7 @@ public class CurrentAccountController implements AccountsApi {
             @PathVariable UUID accountId,
             @Valid @RequestBody DepositRequest depositRequest
     ) {
+        log.info("deposit: accountId={}, depositId={}, amount={}", accountId, depositRequest.getDepositId(), depositRequest.getAmount());
         TransactionRecord tx = currentAccountService.deposit(depositRequest.getDepositId(), accountId, BigDecimal.valueOf(depositRequest.getAmount()));
         return ResponseEntity.ok(toTransactionResponse(tx));
     }
@@ -54,6 +68,7 @@ public class CurrentAccountController implements AccountsApi {
             @PathVariable UUID accountId,
             @Valid @RequestBody WithdrawRequest withdrawRequest
     ) {
+        log.info("withdraw: accountId={}, withdrawId={}, amount={}", accountId, withdrawRequest.getWithdrawId(), withdrawRequest.getAmount());
         TransactionRecord tx = currentAccountService.withdraw(withdrawRequest.getWithdrawId(), accountId, BigDecimal.valueOf(withdrawRequest.getAmount()));
         return ResponseEntity.ok(toTransactionResponse(tx));
     }
@@ -63,22 +78,13 @@ public class CurrentAccountController implements AccountsApi {
             @PathVariable UUID accountId,
             @Valid @RequestBody TransferRequest transferRequest
     ) {
+        log.info("transfer: sourceAccountId={}, transferId={}, targetAccountId={}, amount={}",
+                accountId, transferRequest.getTransferId(), transferRequest.getTargetAccountId(), transferRequest.getAmount());
         TransactionRecord tx = currentAccountService.transfer(
                 transferRequest.getTransferId(), accountId,
                 transferRequest.getTargetAccountId(),
                 BigDecimal.valueOf(transferRequest.getAmount()));
         return ResponseEntity.ok(toTransactionResponse(tx));
-    }
-
-    @Override
-    public ResponseEntity<TransactionListResponse> getTransactions(
-            @PathVariable UUID accountId
-    ) {
-        List<TransactionResponse> txs = currentAccountService.getTransactions(accountId)
-                .values().stream()
-                .map(this::toTransactionResponse)
-                .toList();
-        return ResponseEntity.ok(new TransactionListResponse().transactions(txs));
     }
 
     private TransactionResponse toTransactionResponse(TransactionRecord tx) {

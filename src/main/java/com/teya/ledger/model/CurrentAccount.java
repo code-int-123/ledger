@@ -1,9 +1,12 @@
 package com.teya.ledger.model;
 
+import lombok.Getter;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.UUID;
 
+@Getter
 public class CurrentAccount {
 
     private final UUID accountId;
@@ -14,18 +17,6 @@ public class CurrentAccount {
         this.accountId = accountId;
         this.userId = userId;
         this.balance = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-    }
-
-    public UUID getAccountId() {
-        return accountId;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public BigDecimal getBalance() {
-        return balance;
     }
 
     public void credit(BigDecimal amount) {
