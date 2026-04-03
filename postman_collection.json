@@ -1,0 +1,266 @@
+{
+  "info": {
+    "name": "Ledger API",
+    "description": "Collection for the Ledger current account API. \n\nVariables used:\n- `baseUrl` — defaults to http://localhost:8080\n- `accountId` — auto-set when you run \"Open Account\"\n- `sourceAccountId` / `targetAccountId` — auto-set when you run \"Open Account (Source)\" / \"Open Account (Target)\"",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    },
+    {
+      "key": "sourceAccountId",
+      "value": ""
+    },
+    {
+      "key": "targetAccountId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "Open Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('accountId', body.accountId);",
+                  "    console.log('accountId set to', body.accountId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{$randomUUID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current"]
+            },
+            "description": "Opens a current account for a user. Each user may only have one account — repeated calls with the same userId return the same accountId.\n\nAutomatically saves `accountId` to the collection variable."
+          }
+        },
+        {
+          "name": "Open Account (Source)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('sourceAccountId', body.accountId);",
+                  "    console.log('sourceAccountId set to', body.accountId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{$randomUUID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current"]
+            },
+            "description": "Opens a source account for transfer testing. Saves `sourceAccountId`."
+          }
+        },
+        {
+          "name": "Open Account (Target)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('targetAccountId', body.accountId);",
+                  "    console.log('targetAccountId set to', body.accountId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{$randomUUID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current"]
+            },
+            "description": "Opens a target account for transfer testing. Saves `targetAccountId`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Get Transactions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{accountId}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{accountId}}", "transactions"]
+            },
+            "description": "Returns all transactions recorded against `accountId`, keyed by transaction ID.\n\nReturns 404 if the account does not exist."
+          }
+        },
+        {
+          "name": "Get Transactions (Source)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{sourceAccountId}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{sourceAccountId}}", "transactions"]
+            },
+            "description": "Returns all transactions for the source account."
+          }
+        },
+        {
+          "name": "Get Transactions (Target)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{targetAccountId}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{targetAccountId}}", "transactions"]
+            },
+            "description": "Returns all transactions for the target account."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deposit",
+      "item": [
+        {
+          "name": "Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depositId\": \"{{$randomUUID}}\",\n  \"amount\": 100.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{accountId}}/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{accountId}}", "deposit"]
+            },
+            "description": "Credits funds to `accountId`.\n\n`depositId` is an idempotency key — resubmitting the same value returns the original transaction without crediting again.\n\nReturns 404 if the account does not exist.\nReturns 400 if `depositId` or `amount` is missing, or if `amount` is ≤ 0."
+          }
+        },
+        {
+          "name": "Deposit (Source)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depositId\": \"{{$randomUUID}}\",\n  \"amount\": 500.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{sourceAccountId}}/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{sourceAccountId}}", "deposit"]
+            },
+            "description": "Credits funds to the source account before a transfer."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Withdraw",
+      "item": [
+        {
+          "name": "Withdraw",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"withdrawId\": \"{{$randomUUID}}\",\n  \"amount\": 50.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{accountId}}/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{accountId}}", "withdraw"]
+            },
+            "description": "Debits funds from `accountId`.\n\n`withdrawId` is an idempotency key — resubmitting the same value returns the original transaction without debiting again.\n\nReturns 404 if the account does not exist.\nReturns 422 if the account balance is insufficient.\nReturns 400 if `withdrawId` or `amount` is missing, or if `amount` is ≤ 0."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "item": [
+        {
+          "name": "Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transferId\": \"{{$randomUUID}}\",\n  \"targetAccountId\": \"{{targetAccountId}}\",\n  \"amount\": 200.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/current/{{sourceAccountId}}/transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "current", "{{sourceAccountId}}", "transfer"]
+            },
+            "description": "Transfers funds from `sourceAccountId` to `targetAccountId`.\n\nRecords a `TRANSFER_OUT` on the source and a `TRANSFER_IN` on the target, both sharing the same `transferId`.\n\n`transferId` is an idempotency key — resubmitting the same value returns the original transaction without re-applying the transfer.\n\nReturns 404 if either account does not exist.\nReturns 422 if the source balance is insufficient.\nReturns 400 if any required field is missing or `amount` is ≤ 0."
+          }
+        }
+      ]
+    }
+  ]
+}

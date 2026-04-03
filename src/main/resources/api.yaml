@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: Ledger API
+  description: API for managing ledger accounts
+  version: 0.0.1
+
+paths:
+  /accounts/current:
+    post:
+      summary: Open a current account
+      description: Opens a current account for the given user. Each user may only have one current account.
+      operationId: openCurrentAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenCurrentAccountRequest'
+      responses:
+        '201':
+          description: Current account successfully opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenCurrentAccountResponse'
+
+  /accounts/current/{accountId}/transactions:
+    get:
+      summary: Get all transactions for a current account
+      operationId: getTransactions
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/current/{accountId}/deposit:
+    post:
+      summary: Deposit funds into a current account
+      operationId: deposit
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositRequest'
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/current/{accountId}/withdraw:
+    post:
+      summary: Withdraw funds from a current account
+      operationId: withdraw
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawRequest'
+      responses:
+        '200':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/current/{accountId}/transfer:
+    post:
+      summary: Transfer funds to another current account
+      operationId: transfer
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '404':
+          description: Source or target account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    OpenCurrentAccountRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: The ID of the user opening the current account
+
+    OpenCurrentAccountResponse:
+      type: object
+      required:
+        - accountId
+      properties:
+        accountId:
+          type: string
+          format: uuid
+          description: The ID of the newly opened current account
+
+    DepositRequest:
+      type: object
+      required:
+        - depositId
+        - amount
+      properties:
+        depositId:
+          type: string
+          format: uuid
+          description: Idempotency key — resubmitting with the same depositId returns the original transaction
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Amount to deposit (must be positive)
+
+    WithdrawRequest:
+      type: object
+      required:
+        - withdrawId
+        - amount
+      properties:
+        withdrawId:
+          type: string
+          format: uuid
+          description: Idempotency key — resubmitting with the same withdrawId returns the original transaction
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Amount to withdraw (must be positive)
+
+    TransactionResponse:
+      type: object
+      required:
+        - transactionId
+        - type
+        - amount
+        - timestamp
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [DEPOSIT, WITHDRAW, TRANSFER_OUT, TRANSFER_IN]
+        amount:
+          type: number
+          format: double
+        timestamp:
+          type: string
+          format: date-time
+
+    TransferRequest:
+      type: object
+      required:
+        - transferId
+        - targetAccountId
+        - amount
+      properties:
+        transferId:
+          type: string
+          format: uuid
+          description: Idempotency key — resubmitting with the same transferId returns the original transaction
+        targetAccountId:
+          type: string
+          format: uuid
+          description: The account to transfer funds into
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Amount to transfer (must be positive)
+
+    TransactionListResponse:
+      type: object
+      required:
+        - transactions
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Human-readable error message
